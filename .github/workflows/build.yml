@@ -1,48 +1,70 @@
-name: Build Android APK
+name: Build Goal Kart APK
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-jobs:
-  apk:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+permissions:
+  contents: read
 
-      - uses: actions/setup-node@v4
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: "17"
 
-      - name: Prepare web app (index.html in repo root)
+      - name: Prepare web app
         run: |
-          mkdir www
+          mkdir -p www
           cp index.html www/index.html
+          test -f Assets/icon-only.png
 
       - name: Install Capacitor
         run: |
           npm init -y
-          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npm install --save-dev @capacitor/assets
 
       - name: Create Android project
         run: |
-          npx cap init "Mera 90 Din" com.shridev.mera90din --web-dir=www
+          npx cap init "Goal Kart" "com.shridev.mera90din" --web-dir www
           npx cap add android
-          npx cap sync android
 
-      - name: Goal Kart Apk
+      - name: Generate Goal Kart app icons
+        run: |
+          npx capacitor-assets generate --android --iconPath Assets/icon-only.png
+
+      - name: Sync Android app
+        run: npx cap sync android
+
+      - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - uses: actions/upload-artifact@v4
+      - name: Rename APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk Goal-Kart.apk
+
+      - name: Upload Goal Kart APK
+        uses: actions/upload-artifact@v4
         with:
-          name: Goal kart app Apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Goal-Kart-APK
+          path: Goal-Kart.apk
+          if-no-files-found: error
+          retention-days: 14
