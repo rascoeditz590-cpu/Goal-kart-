@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>GoalKart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#F5F7FF;--card:#fff;--tx:#080D20;--mu:#5b6482;--ac:#4567FF;--bd:#dfe3f5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#080D20;--card:#151B2D;--tx:#F5F7FF;--mu:#9aa4c7;--bd:#252d47}}
+:root[data-theme="dark"]{--bg:#080D20;--card:#151B2D;--tx:#F5F7FF;--mu:#9aa4c7;--bd:#252d47}
+:root[data-theme="black"]{--bg:#000;--card:#0b0b12;--tx:#F5F7FF;--mu:#9aa4c7;--bd:#1f2233}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+main{max-width:720px;margin:0 auto;padding:16px 16px 90px}
+h1{font-size:22px;margin:4px 0 12px}h2{font-size:17px;margin:18px 0 8px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 4px 18px #0000001a}
+.row{display:flex;gap:10px;align-items:center}.sp{justify-content:space-between}
+.mu{color:var(--mu);font-size:14px}
+button,input,select,textarea{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:10px 12px}
+textarea{width:100%;min-height:90px}input,select{max-width:100%}
+button{cursor:pointer}button.p{background:linear-gradient(135deg,#4567FF,#9061FF);color:#fff;border:0}
+button.g{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 14px;font-size:14px;font-weight:600;border-radius:999px}
+button.g.d{color:#e5484d;border-color:#e5484d55}
+button:hover{border-color:var(--ac)}button:active{transform:scale(.96)}
+button.p{box-shadow:0 6px 18px #4567ff44;font-weight:600}
+.chip{border-radius:999px}
+label.chip{border:1px solid var(--bd);border-radius:999px;padding:8px 14px;cursor:pointer;background:var(--bg);font-weight:600;font-size:14px}
+label.chip input{display:none}
+label.chip:has(input:checked){background:var(--ac);color:#fff;border-color:var(--ac)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #20D9E8;outline-offset:2px}
+.chk{width:44px;height:44px;border-radius:50%;flex:none;font-size:18px;padding:0}
+.chk.on{background:var(--ac);border-color:var(--ac);color:#fff}.chk.part{border-color:var(--ac);color:var(--ac)}
+.bar{height:8px;background:var(--bd);border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#20D9E8,var(--ac),#9061FF)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--bd);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav{gap:4px;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;max-width:110px;border:0;background:none;border-radius:999px;padding:10px 2px;font-size:13px;color:var(--mu)}
+nav button.on{color:#fff;background:linear-gradient(135deg,#4567FF,#9061FF);font-weight:700}
+.chip{display:inline-block;margin:4px 6px 4px 0}.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.big{font-size:54px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:no-preference){.bar i{transition:width .4s}}
+.w{display:flex;flex-wrap:wrap;gap:6px}
+</style></head><body><main id="app"></main><nav id="nav"></nav>
+<script>
+const KEY='goalkart.v1';
+const AREAS=['Student','Fitness','Reading','Career','Creator','Trading Education','General Discipline','Custom'];
+const ACC=['#4567FF','#20D9E8','#9061FF','#e8704a'];
+let S=load();
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return s}catch(e){}
+return{theme:'system',accent:ACC[0],personas:null,goals:[],habits:[],logs:{},diary:{},focus:[],rest:[],tab:'today'}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const pad=n=>String(n).padStart(2,'0');
+const ds=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const fromS=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const addD=(s,n)=>{const d=fromS(s);d.setDate(d.getDate()+n);return ds(d)};
+const today=()=>ds(new Date());
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const val=(h,d)=>(S.logs[h.id]||{})[d]||0;
+const done=(h,d)=>val(h,d)>=h.target;
+const sched=(h,d)=>!h.paused&&d>=h.start&&h.days.includes(fromS(d).getDay())&&!S.rest.includes(d);
+function streak(h){let d=today(),n=0,first=true;
+for(let i=0;i<800;i++,d=addD(d,-1)){if(d<h.start)break;
+if(!h.days.includes(fromS(d).getDay())||S.rest.includes(d))continue;
+if(done(h,d))n++;else if(first&&d===today()){}else break;first=false}return n}
+function applyTheme(){const r=document.documentElement;
+if(S.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',S.theme);
+r.style.setProperty('--ac',S.accent)}
+const LOGO='<svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="GoalKart logo"><defs><linearGradient id="lg" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#20D9E8"/><stop offset="1" stop-color="#9061FF"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="#080D20"/><circle cx="32" cy="32" r="19" fill="none" stroke="url(#lg)" stroke-width="5" stroke-dasharray="95 25" transform="rotate(30 32 32)"/><path d="M32 33h13M18 46l10-9 6 4 14-15" fill="none" stroke="#F5F7FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function render(){applyTheme();save();
+if(!S.personas){return onboard()}
+const T=[['today','Today'],['goals','Goals'],['focus','Focus'],['journal','Journal'],['report','Report'],['set','Settings']];
+$('#nav').innerHTML=T.map(t=>`<button class="${S.tab===t[0]?'on':''}" data-t="${t[0]}">${t[1]}</button>`).join('');
+$('#nav').onclick=e=>{const t=e.target.dataset.t;if(t){S.tab=t;render()}};
+({today:vToday,goals:vGoals,focus:vFocus,journal:vJournal,report:vReport,set:vSet})[S.tab]()}
+function onboard(){$('#nav').innerHTML='';let sel=[];
+$('#app').innerHTML=`<div class="row">${LOGO}<h1 style="margin:0">GoalKart</h1></div><p class="mu">Plan your goals. Build your future.</p>
+<div class="card"><b>What are you working on?</b><p class="mu">Pick one or more. Everything stays editable.</p><div class="w" id="ar">${AREAS.map(a=>`<button class="chip" data-a="${a}">${a}</button>`).join('')}</div>
+<p><button class="p" id="go">Start</button></p></div>`;
+$('#ar').onclick=e=>{const a=e.target.dataset.a;if(!a)return;e.target.classList.toggle('on');sel=sel.includes(a)?sel.filter(x=>x!==a):[...sel,a]};
+$('#go').onclick=()=>{S.personas=sel.length?sel:['Custom'];S.tab='goals';render()}}
+function vToday(){const d=today(),hs=S.habits.filter(h=>sched(h,d));
+const nDone=hs.filter(h=>done(h,d)).length,isRest=S.rest.includes(d);
+$('#app').innerHTML=`<h1>Today</h1><div class="mu">${fromS(d).toDateString()}</div>
+<div class="card"><div class="row sp"><b>${isRest?'Rest day':nDone+' of '+hs.length+' done'}</b><button class="g" id="rest">${isRest?'Undo rest day':'Mark rest day'}</button></div>
+<div class="bar"><i style="width:${hs.length?nDone/hs.length*100:0}%"></i></div></div>
+${hs.length?hs.map(h=>`<div class="card row"><button class="chk ${done(h,d)?'on':val(h,d)?'part':''}" data-h="${h.id}" aria-label="Log ${esc(h.name)}">${done(h,d)?'✓':h.target>1?val(h,d):''}</button>
+<div style="flex:1"><b>${esc(h.name)}</b><div class="mu">${h.target>1?val(h,d)+' / '+h.target+' '+esc(h.unit):'Streak '+streak(h)+' days'}${h.target>1?' · streak '+streak(h):''}</div></div>
+<button class="g" data-u="${h.id}" aria-label="Undo">↶ Undo</button></div>`).join(''):`<div class="card mu">${isRest?'Enjoy your rest. Your streaks are protected.':'No habits scheduled today. Create one under Goals.'}</div>`}`;
+$('#rest').onclick=()=>{S.rest=S.rest.includes(d)?S.rest.filter(x=>x!==d):[...S.rest,d];render()};
+$('#app').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+const h=S.habits.find(x=>x.id===(b.dataset.h||b.dataset.u));if(!h)return;
+const L=S.logs[h.id]=S.logs[h.id]||{};
+if(b.dataset.h){L[d]=Math.min(h.target,(L[d]||0)+1)}else{L[d]=Math.max(0,(L[d]||0)-1)}render()}}
+function vGoals(){const G=S.goals;
+$('#app').innerHTML=`<h1>Goals</h1>
+<div class="card"><b>New goal</b><p><input id="gt" placeholder="Type what you want to achieve" style="width:100%"></p>
+<div class="row"><select id="ga">${S.personas.map(a=>`<option>${a}</option>`).join('')}</select><input id="gd" type="date"><button class="p" id="ag">Add</button></div></div>
+${G.length?G.map(g=>{const hs=S.habits.filter(h=>h.goal===g.id),ms=g.ms||[],md=ms.filter(m=>m.d).length;
+return`<div class="card"><div class="row sp"><b>${esc(g.title)}</b><button class="g d" data-dg="${g.id}">🗑 Delete</button></div>
+<div class="mu">${esc(g.area)}${g.due?' · due '+g.due:''}${ms.length?' · '+md+'/'+ms.length+' milestones':''}</div>
+${ms.length?`<div class="bar"><i style="width:${md/ms.length*100}%"></i></div>`:''}
+${ms.map((m,i)=>{const blocked=i>0&&!ms[i-1].d;return`<label class="row" style="padding:6px 0"><input type="checkbox" data-m="${g.id}:${i}" ${m.d?'checked':''} ${blocked?'disabled':''}><span class="${blocked?'mu':''}">${esc(m.t)}${blocked?' (locked until previous is done)':''}</span></label>`}).join('')}
+<div class="row" style="margin-top:6px"><input data-mi="${g.id}" placeholder="Add milestone" style="flex:1"><button data-am="${g.id}">+</button></div>
+${hs.map(h=>`<div class="row sp mu" style="margin-top:6px"><span>↳ ${esc(h.name)} · ${['Su','Mo','Tu','We','Th','Fr','Sa'].filter((_,i)=>h.days.includes(i)).join(' ')}</span><span><button class="g" data-pz="${h.id}">${h.paused?'Resume':'Pause'}</button><button class="g d" data-dh="${h.id}">Delete</button></span></div>`).join('')}
+<details style="margin-top:8px"><summary>Add habit to this goal</summary>
+<p><input data-hn="${g.id}" placeholder="Habit name" style="width:100%"></p>
+<div class="w" data-hd="${g.id}">${['Su','Mo','Tu','We','Th','Fr','Sa'].map((x,i)=>`<label class="chip"><input type="checkbox" value="${i}" checked> ${x}</label>`).join('')}</div>
+<div class="row"><input data-ht="${g.id}" type="number" min="1" value="1" style="width:80px" aria-label="Daily target"><input data-hu="${g.id}" placeholder="unit (e.g. pages)" style="flex:1"><button class="p" data-ah="${g.id}">Add</button></div></details></div>`}).join(''):'<div class="card mu">No goals yet. Type one above to begin; add milestones and habits to break it into daily actions.</div>'}`;
+$('#ag').onclick=()=>{const t=$('#gt').value.trim();if(!t)return;S.goals.push({id:uid(),title:t,area:$('#ga').value,due:$('#gd').value,ms:[]});render()};
+$('#app').onclick=e=>{const b=e.target.closest('button'),D=b&&b.dataset;if(!D)return;
+if(D.dg){if(confirm('Delete this goal? Linked habits will be kept unlinked.')){S.habits.forEach(h=>{if(h.goal===D.dg)h.goal=null});S.goals=S.goals.filter(g=>g.id!==D.dg);render()}}
+if(D.am){const i=document.querySelector(`[data-mi="${D.am}"]`),t=i.value.trim();if(t){S.goals.find(g=>g.id===D.am).ms.push({t,d:false});render()}}
+if(D.pz){const h=S.habits.find(x=>x.id===D.pz);h.paused=!h.paused;render()}
+if(D.dh&&confirm('Delete this habit and its history?')){S.habits=S.habits.filter(h=>h.id!==D.dh);delete S.logs[D.dh];render()}
+if(D.ah){const q=s=>document.querySelector(`[data-${s}="${D.ah}"]`),n=q('hn').value.trim();if(!n)return;
+const days=[...q('hd').querySelectorAll('input:checked')].map(x=>+x.value);if(!days.length)return alert('Pick at least one weekday.');
+S.habits.push({id:uid(),name:n,goal:D.ah,days,target:Math.max(1,parseInt(q('ht').value)||1),unit:q('hu').value.trim()||'times',start:today(),paused:false});render()}};
+$('#app').onchange=e=>{const m=e.target.dataset.m;if(!m)return;const[g,i]=m.split(':');S.goals.find(x=>x.id===g).ms[+i].d=e.target.checked;render()}}
+let tmr=null,left=1500,run=false;
+function vFocus(){const m=S.focus.filter(f=>f.date===today()).reduce((a,f)=>a+f.min,0);
+$('#app').innerHTML=`<h1>Focus</h1><div class="card"><div class="big" id="t">${fmt(left)}</div>
+<div class="row" style="justify-content:center"><select id="len"><option value="900">15 min</option><option value="1500" selected>25 min</option><option value="2700">45 min</option></select><button class="p" id="st">${run?'Pause':'Start'}</button><button id="rs">Reset</button></div></div>
+<div class="card mu">Focused today: ${m} min. Missed a session? No penalty: just start another when ready.</div>
+<div class="card"><b>Distraction note</b><p class="mu">Park a stray thought so you can return to it later.</p><input id="dn" placeholder="Note" style="width:100%"></div>`;
+$('#len').value=String(left>=2700?2700:left>=1500?1500:900);
+$('#len').onchange=e=>{if(!run){left=+e.target.value;$('#t').textContent=fmt(left)}};
+$('#st').onclick=()=>{if(run){clearInterval(tmr);run=false}else{run=true;const len=+$('#len').value;tmr=setInterval(()=>{left--;const t=$('#t');if(t)t.textContent=fmt(left);
+if(left<=0){clearInterval(tmr);run=false;S.focus.push({date:today(),min:Math.round(len/60)});left=len;save();alert('Session complete. Take a short break.');if(S.tab==='focus')render()}},1000)}render()};
+$('#rs').onclick=()=>{clearInterval(tmr);run=false;left=+$('#len').value;render()}}
+const fmt=s=>pad(Math.floor(s/60))+':'+pad(s%60);
+function vJournal(){const d=today(),e=S.diary[d]||{mood:0,text:''};
+$('#app').innerHTML=`<h1>Journal</h1><div class="card"><b>How was today?</b><div class="w" id="md" style="margin:8px 0">${['😞','😕','😐','🙂','😄'].map((x,i)=>`<button class="chip ${e.mood===i+1?'on':''}" data-m="${i+1}" aria-label="Mood ${i+1}">${x}</button>`).join('')}</div>
+<textarea id="tx" placeholder="Reflection, lessons learned...">${esc(e.text)}</textarea><p><button class="p" id="sv">Save entry</button></p></div>
+<h2>Past entries</h2>${Object.keys(S.diary).sort().reverse().filter(k=>k!==d).map(k=>`<div class="card"><b>${k}</b> ${['','😞','😕','😐','🙂','😄'][S.diary[k].mood]||''}<div class="mu">${esc(S.diary[k].text)}</div></div>`).join('')||'<div class="mu">None yet.</div>'}`;
+$('#md').onclick=ev=>{const m=ev.target.dataset.m;if(m){S.diary[d]={...e,mood:+m,text:$('#tx').value};render()}};
+$('#sv').onclick=()=>{S.diary[d]={mood:(S.diary[d]||{}).mood||0,text:$('#tx').value};render()}}
+function vReport(){const end=today(),days=[...Array(7)].map((_,i)=>addD(end,-i));let sch=0,dn=0;
+const rows=S.habits.map(h=>{let a=0,b=0;days.forEach(d=>{if(sched(h,d)){a++;if(done(h,d))b++}});sch+=a;dn+=b;return{h,a,b}});
+const fm=S.focus.filter(f=>days.includes(f.date)).reduce((a,f)=>a+f.min,0),moods=days.map(d=>(S.diary[d]||{}).mood).filter(Boolean);
+$('#app').innerHTML=`<h1>Weekly report</h1><div class="mu">Last 7 days, calculated only from your saved records.</div>
+<div class="card"><b>${sch?dn+' of '+sch+' scheduled habit check-ins completed ('+Math.round(dn/sch*100)+'%)':'No scheduled habits in this period.'}</b>
+<div class="mu">Focus: ${fm} min · Rest days: ${days.filter(d=>S.rest.includes(d)).length}${moods.length?' · Avg mood '+(moods.reduce((a,b)=>a+b)/moods.length).toFixed(1)+'/5 ('+moods.length+' entries)':''}</div></div>
+${rows.map(r=>`<div class="card row sp"><span>${esc(r.h.name)}</span><span class="mu">${r.b}/${r.a} · streak ${streak(r.h)}</span></div>`).join('')}
+<h2>Goal progress</h2>${S.goals.map(g=>{const ms=g.ms||[],n=ms.filter(m=>m.d).length,nx=ms.find(m=>!m.d);return`<div class="card"><b>${esc(g.title)}</b><div class="mu">${ms.length?n+'/'+ms.length+' milestones':'No milestones yet'}${nx?' · next: '+esc(nx.t):''}</div></div>`}).join('')||'<div class="mu">No goals yet.</div>'}`}
+function vSet(){$('#app').innerHTML=`<div class="row">${LOGO}<h1 style="margin:0">Settings</h1></div>
+<div class="card"><b>Theme</b><div class="w" style="margin-top:8px">${['system','light','dark','black'].map(t=>`<button class="chip ${S.theme===t?'on':''}" data-th="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div></div>
+<div class="card"><b>Focus areas</b><div class="w" id="ar" style="margin-top:6px">${AREAS.map(a=>`<button class="chip ${S.personas.includes(a)?'on':''}" data-a="${a}">${a}</button>`).join('')}</div></div>
+<div class="card"><b>Your data</b><p class="mu">Stored only in this browser on this device.</p><div class="w"><button class="g" id="ex">Export data (JSON)</button><button class="g d" id="del">Delete everything</button></div><textarea id="out" hidden readonly></textarea></div>`;
+$('#app').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+if(b.dataset.th){S.theme=b.dataset.th;render()}
+if(b.dataset.a){const a=b.dataset.a;S.personas=S.personas.includes(a)?S.personas.filter(x=>x!==a):[...S.personas,a];if(!S.personas.length)S.personas=['Custom'];render()}
+if(b.id==='ex'){const o=$('#out');o.hidden=false;o.value=JSON.stringify(S,null,2);o.select()}
+if(b.id==='del'&&confirm('Permanently delete all goals, habits, logs and journal entries?')){try{localStorage.removeItem(KEY)}catch(x){}S=load();render()}}}
+render();
+</script></body></html>
