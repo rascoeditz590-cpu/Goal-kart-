@@ -1,0 +1,48 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Prepare web app (index.html in repo root)
+        run: |
+          mkdir www
+          cp index.html www/index.html
+
+      - name: Install Capacitor
+        run: |
+          npm init -y
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+
+      - name: Create Android project
+        run: |
+          npx cap init "Mera 90 Din" com.shridev.mera90din --web-dir=www
+          npx cap add android
+          npx cap sync android
+
+      - name: Goal Kart Apk
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Goal kart app Apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
