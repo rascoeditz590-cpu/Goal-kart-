@@ -2,7 +2,8 @@ name: Build Goal Kart APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -27,11 +28,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Prepare web app
+      - name: Prepare website and logo
         run: |
-          mkdir -p www
+          mkdir -p www assets
           cp index.html www/index.html
-          test -f Assets/icon-only.png
+          cp Assets/icon-only.png assets/icon.png
+          test -s assets/icon.png
 
       - name: Install Capacitor
         run: |
@@ -44,14 +46,14 @@ jobs:
           npx cap init "Goal Kart" "com.shridev.mera90din" --web-dir www
           npx cap add android
 
-      - name: Generate Goal Kart app icons
+      - name: Generate app icons
         run: |
-          npx capacitor-assets generate --android --iconPath Assets/icon-only.png
+          npx capacitor-assets generate --android
 
-      - name: Sync Android app
+      - name: Sync Android project
         run: npx cap sync android
 
-      - name: Build APK
+      - name: Build Goal Kart APK
         working-directory: android
         run: |
           chmod +x gradlew
@@ -60,6 +62,7 @@ jobs:
       - name: Rename APK
         run: |
           cp android/app/build/outputs/apk/debug/app-debug.apk Goal-Kart.apk
+          test -s Goal-Kart.apk
 
       - name: Upload Goal Kart APK
         uses: actions/upload-artifact@v4
